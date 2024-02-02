@@ -1,0 +1,27 @@
+version: '3.6'
+
+services:
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - ./db/development/redis:/data
+
+  db:
+    image: postgres:13.13
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${USER}
+      POSTGRES_HOST_AUTH_METHOD: trust # IMPORTANT allows all connections without a password - experimental only!
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./db/development/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./db/development/postgres/data:/var/lib/postgresql/data
+      - ./db/development/postgres/downloads:/usr/local/downloads
+
+networks:
+  default:
+    driver: bridge

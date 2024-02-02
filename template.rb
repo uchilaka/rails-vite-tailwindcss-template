@@ -23,8 +23,8 @@ def add_template_repository_to_source_path
 end
 
 def add_gems
-  gem 'vite_rails'
-  gem 'vite_ruby'
+  gem 'vite_rails', '~> 3.0', '>= 3.0.17'
+  gem 'vite_ruby', '~> 3.2', '>= 3.2.2'
   gem 'ruby-vips', '~> 2.1', '>= 2.1.4'
   gem 'annotate', group: :development
   gem 'devise'
@@ -67,6 +67,17 @@ def add_hotwired
   run 'yarn add @hotwired/stimulus @hotwired/turbo-rails'
 end
 
+def setup_legacy_version_files
+  copy_file '.node-version'
+end
+
+def setup_docker_compose
+  copy_file 'docker-compose.yml'
+  system 'docker compose up -d', out: $stdout, err: :out
+  inject_into_file '.gitignore', "\n\n# Ignore docker container files\n/db/development/", after: '/public/assets'
+  sleep 5
+end
+
 def copy_templates
 
   copy_file 'Procfile.dev'
@@ -89,27 +100,29 @@ end
 
 def run_command_flags
   ARGV.each do |flag|
-    copy_file 'vite.config-react.ts', 'vite.config.ts' if flag == '--react'
-    copy_file '.eslintrc-react.json', '.eslintrc.json' if flag == '--react'
-    directory 'app-react', 'app', force: true if flag == '--react'
-    add_javascript_react if flag == '--react'
-
-    copy_file 'vite.config-vue.ts', 'vite.config.ts' if flag == '--vue'
-    copy_file '.eslintrc-vue.json', '.eslintrc.json' if flag == '--vue'
-    directory 'app-vue', 'app', force: true if flag == '--vue'
-    add_javascript_vue if flag == '--vue'
-
-    copy_file 'vite.config.ts' if flag == '--normal'
-    copy_file '.eslintrc.json' if flag == '--normal'
-    directory 'app', force: true if flag == '--normal'
-    add_javascript if flag == '--normal'
-
-    directory 'hotwired-generator', 'lib/generators' if flag == '--hotwired'
-    add_hotwired_gem if flag == '--hotwired'
-    add_hotwired if flag == '--hotwired'
-
-    if flag == '--hotwired'
+    case flag
+    when '--react'
+      copy_file 'vite.config-react.ts', 'vite.config.ts'
+      copy_file '.eslintrc-react.json', '.eslintrc.json'
+      directory 'app-react', 'app', force: true
+      add_javascript_react
+    when '--vue'
+      copy_file 'vite.config-vue.ts', 'vite.config.ts'
+      copy_file '.eslintrc-vue.json', '.eslintrc.json'
+      directory 'app-vue', 'app', force: true
+      add_javascript_vue
+    when '--normal'
+      copy_file 'vite.config.ts'
+      copy_file '.eslintrc.json'
+      directory 'app', force: true
+      add_javascript
+    when '--hotwired'
+      directory 'hotwired-generator', 'lib/generators'
+      add_hotwired_gem
+      add_hotwired
       inject_into_file('app/frontend/entrypoints/application.js', 'import { Turbo } from "@hotwired/turbo-rails";' "\n\n" 'window.Turbo = Turbo;' "\n\n", before: 'import "./main.scss";')
+    else
+      # Do nothing
     end
   end
 end
@@ -121,6 +134,8 @@ after_bundle do
   add_template_repository_to_source_path
   set_application_name
   add_pages_controller
+  setup_legacy_version_files
+  setup_docker_compose
   run_command_flags
 
   copy_templates
