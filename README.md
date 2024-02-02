@@ -121,7 +121,7 @@ And that is all, now you will have `Hotwired + Stimulus` installed in your proje
 If you want to run the database in Docker, you can use the following commands:
 
 ```shell
-# Pipe socket requests to the database server to the local machine
+# Relay database socket requests to the localhost server via TCP
 socat -v UNIX-LISTEN:/tmp/.s.PGSQL.5432,fork TCP:localhost:5432
 ```
 
