@@ -85,7 +85,11 @@ def copy_templates
   copy_file 'tailwind.config.js'
   copy_file 'postcss.config.js'
 
+  copy_file '.env.development'
+  copy_file '.env.test'
+
   # directory 'app', force: true
+  directory 'bin', force: true
   directory 'config', force: true
   directory 'lib', force: true
 
