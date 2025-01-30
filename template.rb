@@ -101,9 +101,9 @@ def copy_templates
   copy_file '.env.test'
 
   # directory 'app', force: true
-  directory 'bin', force: true
   directory 'config', force: true
   directory 'lib', force: true
+  directory 'script', force: true
 
   run 'for file in lib/templates/**/**/*.txt; do mv "$file" "${file%.txt}.tt"; done'
   say '  Custom scaffold templates copied', :green
@@ -162,7 +162,7 @@ after_bundle do
   add_vite
 
   db_shared_config = <<-DB_CONFIG
-  username: <%= ENV.fetch('DATABASE_USER', '#{ENV.fetch('USER')}') %>
+  username: <%= ENV['DATABASE_USER'] || ENV['USER'] %>
   <% if ENV['DATABASE_HOST'].present? %>
   host: '<%= ENV['DATABASE_HOST'] %>'
   <% end %>
