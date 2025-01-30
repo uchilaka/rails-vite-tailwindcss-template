@@ -23,9 +23,9 @@ def add_template_repository_to_source_path
 end
 
 def add_gems
-  gem 'vite_rails', '~> 3.0', '>= 3.0.17'
-  gem 'vite_ruby', '~> 3.2', '>= 3.2.2'
-  gem 'ruby-vips', '~> 2.1', '>= 2.1.4'
+  gem 'vite_rails', '~> 3.0', '>= 3.0.19'
+  gem 'vite_ruby', '~> 3.9', '>= 3.9.1'
+  gem 'ruby-vips', '~> 2.2', '>= 2.2.2'
   gem 'annotate', group: :development
   gem 'devise'
   gem 'name_of_person'
@@ -49,33 +49,45 @@ def add_vite
 end
 
 def add_javascript
-  run 'yarn add autoprefixer postcss sass tailwindcss vite @tailwindcss/forms'
-  run 'yarn add -D eslint prettier eslint-plugin-prettier eslint-config-prettier path vite-plugin-full-reload vite-plugin-ruby'
+  setup_yarn_v4
+  run 'yarn add autoprefixer postcss sass tailwindcss @tailwindcss/forms'
+  run 'yarn add -D vite vite-plugin-ruby eslint prettier eslint-plugin-prettier eslint-config-prettier path vite-plugin-full-reload'
 end
 
 def add_javascript_vue
-  run 'yarn add autoprefixer postcss sass tailwindcss vite vue @tailwindcss/forms'
-  run 'yarn add -D @vitejs/plugin-vue @vue/compiler-sfc eslint prettier eslint-plugin-prettier eslint-config-prettier eslint-plugin-vue path vite-plugin-full-reload vite-plugin-ruby'
+  setup_yarn_v4
+  run 'yarn add autoprefixer postcss sass tailwindcss vue @tailwindcss/forms'
+  run 'yarn add -D vite vite-plugin-ruby @vitejs/plugin-vue @vue/compiler-sfc eslint prettier eslint-plugin-prettier eslint-config-prettier eslint-plugin-vue path vite-plugin-full-reload'
 end
 
 def add_javascript_react
-  run 'yarn add autoprefixer postcss sass tailwindcss vite react react-dom @headlessui/react @heroicons/react @tailwindcss/forms'
-  run 'yarn add -D @vitejs/plugin-react-refresh eslint prettier eslint-plugin-prettier eslint-config-prettier eslint-plugin-react path vite-plugin-full-reload vite-plugin-ruby'
+  setup_yarn_v4
+  run 'yarn add autoprefixer postcss sass tailwindcss react react-dom @headlessui/react @heroicons/react @tailwindcss/forms'
+  run 'yarn add -D vite vite-plugin-ruby @vitejs/plugin-react-refresh eslint prettier eslint-plugin-prettier eslint-config-prettier eslint-plugin-react path vite-plugin-full-reload'
 end
 
 def add_hotwired
   run 'yarn add @hotwired/stimulus @hotwired/turbo-rails'
 end
 
+def setup_yarn_v4
+  run 'corepack enable' # TODO: Test this on Windows & Linux OSes
+  run 'yarn set version berry'
+end
+
 def setup_legacy_version_files
   copy_file '.node-version'
 end
 
+def append_docker_ignores
+  inject_into_file '.gitignore', "\n\n# Ignore docker container files\n/db/development/", after: '/public/assets'
+end
+
 def setup_docker_compose
+  # TODO: Check to make sure docker is installed before proceeding
   copy_file 'docker-compose.yml'
   system 'docker compose up -d', out: $stdout, err: :out
-  inject_into_file '.gitignore', "\n\n# Ignore docker container files\n/db/development/", after: '/public/assets'
-  sleep 5
+  sleep 10
 end
 
 def copy_templates
@@ -105,6 +117,8 @@ end
 def run_command_flags
   ARGV.each do |flag|
     case flag
+    when '--docker'
+      setup_docker_compose
     when '--react'
       copy_file 'vite.config-react.ts', 'vite.config.ts'
       copy_file '.eslintrc-react.json', '.eslintrc.json'
@@ -139,11 +153,21 @@ after_bundle do
   set_application_name
   add_pages_controller
   setup_legacy_version_files
-  setup_docker_compose
+  # setup_docker_compose
   run_command_flags
+  # append_docker_ignores
 
   copy_templates
+  setup_yarn_v4
   add_vite
+
+  db_shared_config = <<-DB_CONFIG
+  username: <%= ENV.fetch('DATABASE_USER', '#{ENV.fetch('USER')}') %>
+  <% if ENV['DATABASE_HOST'].present? %>
+  host: '<%= ENV['DATABASE_HOST'] %>'
+  <% end %>
+  DB_CONFIG
+  inject_into_file('config/database.yml', "\n#{db_shared_config}", after: "adapter: postgresql")
 
   rails_command 'db:create'
 
@@ -164,6 +188,33 @@ after_bundle do
       u.permit(:first_name, :last_name, :name, :email, :password, :password_confirmation, :current_password)
     end
   end' "\n\n", after: 'class ApplicationController < ActionController::Base')
+
+  new_ignore_block = <<~GIT_IGNORE
+
+    # Ignore dotenv file
+    .env
+    .env.*.local
+
+    # Ignore yarn v4 files
+    .yarn/*
+    !.yarn/patches
+    !.yarn/releases
+    !.yarn/plugins
+    !.yarn/sdks
+    !.yarn/versions
+
+    # Ignore VSCode files
+    .vscode/*
+    !.vscode/extensions.json
+    !.vscode/settings.json
+
+    # Ignore RubyMine files
+    .idea/*
+
+    # Ignore Docker container files
+    db/development/
+  GIT_IGNORE
+  inject_into_file('.gitignore', new_ignore_block, after: '/public/assets')
 
   rails_command 'active_storage:install'
   rails_command 'g annotate:install'
