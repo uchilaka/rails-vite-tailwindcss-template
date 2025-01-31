@@ -30,7 +30,7 @@ def add_gems
 end
 
 def add_vite_gems
-  copy_file 'vite.json', 'config/vite.json' if Dir.exists?('config')
+  directory 'config', force: true
   gem 'vite_rails', '~> 3.0', '>= 3.0.19'
   gem 'vite_ruby', '~> 3.9', '>= 3.9.1'
 end
@@ -114,6 +114,7 @@ def setup_docker_compose(flag = nil)
   setup_env_files
 
   system 'docker compose --profile essential up -d', out: $stdout, err: :out
+  # TODO: Rather than an arbitrary sleep, check if the services are up and running with a time-boxed loop
   sleep 15
 
   run "createuser --createdb --no-createrole --superuser postgres -h 127.0.0.1 -U #{ENV.fetch('USER')}"
