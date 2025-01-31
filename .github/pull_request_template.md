@@ -31,6 +31,9 @@
 <!--- Go over all the following points, and put an `x` in all the boxes that apply. -->
 <!--- If you're unsure about any of these, don't hesitate to ask. -->
 
+- [ ] I've tested `rails new` with this template for a new directory
+- [ ] I've tested `rails new` with this template for an existing directory
+- [ ] I've tested `rails new` with any new template arguments
 - [ ] My code follows the code style of this project.
 - [ ] This change is covered by automated tests
 - [ ] My change requires a change to the documentation.

@@ -112,13 +112,26 @@ def setup_docker_compose(flag = nil)
   run 'brew install postgresql@15' unless system 'which createuser'
 
   setup_env_files
+  initialize_docker_containers
+end
 
-  system 'docker compose --profile essential up -d', out: $stdout, err: :out
-  # TODO: Rather than an arbitrary sleep, check if the services are up and running with a time-boxed loop
-  sleep 15
+def initialize_docker_containers
+  unless system 'which docker'
+    say "  Docker is not installed. Please install Docker to apply changes #{flag_clause}", :red
+    return
+  end
 
-  run "createuser --createdb --no-createrole --superuser postgres -h 127.0.0.1 -U #{ENV.fetch('USER')}"
-  run "createuser --createdb --no-createrole --superuser root -h 127.0.0.1 -U #{ENV.fetch('USER')}"
+  begin
+    say '  Initializing Docker containers', :cyan
+    system 'docker compose --profile essential up -d', out: $stdout, err: :out
+    # TODO: Rather than an arbitrary sleep, check if the services are up and running with a time-boxed loop
+    sleep 15
+
+    run "createuser --createdb --no-createrole --superuser postgres -h 127.0.0.1 -U #{ENV.fetch('USER')}"
+    run "createuser --createdb --no-createrole --superuser root -h 127.0.0.1 -U #{ENV.fetch('USER')}"
+  rescue StandardError => e
+    say "  Error initializing Docker containers: #{e.message}", :red
+  end
 end
 
 def setup_env_files
