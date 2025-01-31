@@ -203,7 +203,7 @@ after_bundle do
   add_vite
 
   db_shared_config = <<-DB_CONFIG
-  username: <%= ENV['DATABASE_USER'] || ENV['USER'] %>
+  username: <%= ENV['DATABASE_USER'] || ENV['USER'] || 'postgres' %>
   <% if ENV['DATABASE_HOST'].present? %>
   host: '<%= ENV['DATABASE_HOST'] %>'
   <% end %>
@@ -211,7 +211,7 @@ after_bundle do
   DB_CONFIG
   inject_into_file('config/database.yml', "\n#{db_shared_config}", after: "adapter: postgresql")
 
-  rails_command 'db:create'
+  rails_command 'db:setup' # TODO try db:create
 
   rails_command 'generate devise:install'
   rails_command 'generate devise user'
