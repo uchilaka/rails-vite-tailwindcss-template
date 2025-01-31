@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:15
+    hostname: postgres
+    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
+    environment:
+      POSTGRES_USER: ${USER}
+      POSTGRES_HOST_AUTH_METHOD: trust # IMPORTANT allows all connections without a password - experimental only!
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./db/development/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./db/development/postgres/data:/var/lib/postgresql/data
+      - ./db/development/postgres/downloads:/usr/local/downloads
+    profiles:
+      - essential
+      - with-batteries
+
+  redis:
+    image: redis:7
+    hostname: redis
+    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
+    ports:
+      - '6379:6379'
+    volumes:
+      - ./db/development/redis:/data
+    profiles:
+      - essential
+      - with-batteries
+
+  mailhog:
+    image: mailhog/mailhog
+    platform: linux/amd64
+    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+networks:
+  default:
+    driver: bridge

@@ -118,6 +118,15 @@ And that is all, now you will have `Hotwired + Stimulus` installed in your proje
 > - gem 'name_of_person'
 > - gem "stimulus-rails" (Only with flag `--hotwired`)
 
+### Running the database in Docker
+
+If you want to run the database in Docker, you can use the following commands:
+
+```shell
+# Relay database socket requests to the localhost server via TCP
+socat -v UNIX-LISTEN:/tmp/.s.PGSQL.5432,fork TCP:localhost:5432
+```
+
 ### Thank you ⭐️
 
 If you have any questions, just make an issue, I'll answer you as soon as possible.

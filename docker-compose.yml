@@ -1,0 +1,72 @@
+services:
+  db:
+    image: postgres:15
+    hostname: postgres
+    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
+    environment:
+      POSTGRES_USER: ${USER}
+      POSTGRES_HOST_AUTH_METHOD: trust # IMPORTANT allows all connections without a password - experimental only!
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./db/development/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./db/development/postgres/data:/var/lib/postgresql/data
+      - ./db/development/postgres/downloads:/usr/local/downloads
+    profiles:
+      - essential
+      - with-batteries
+
+  # Docs: https://github.com/joeferner/redis-commander?tab=readme-ov-file#with-docker-compose
+  redis-commander:
+    image: ghcr.io/joeferner/redis-commander
+    hostname: redis-commander
+    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
+    env_file:
+      - .env.development
+    #environment:
+    #  - REDIS_HOSTS=${REDIS_HOSTS}
+    ports:
+      - "8081:8081"
+    user: ${REDIS_USER:-redis}
+    depends_on:
+      - redis
+    profiles:
+      - with-admin-tools
+      - with-batteries
+
+  redis:
+    image: redis:7
+    hostname: redis
+    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
+    ports:
+      - '6379:6379'
+    volumes:
+      - ./db/development/redis:/data
+    profiles:
+      - essential
+      - with-batteries
+
+  adminer:
+    image: adminer
+    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+    profiles:
+      - with-admin-tools
+      - with-batteries
+
+  mailhog:
+    image: mailhog/mailhog
+    platform: linux/amd64
+    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+    profiles:
+      - with-batteries
+
+networks:
+  default:
+    driver: bridge
