@@ -166,6 +166,7 @@ after_bundle do
   <% if ENV['DATABASE_HOST'].present? %>
   host: '<%= ENV['DATABASE_HOST'] %>'
   <% end %>
+  port: <%= ENV.fetch('DATABASE_PORT', 5432) %>
   DB_CONFIG
   inject_into_file('config/database.yml', "\n#{db_shared_config}", after: "adapter: postgresql")
 
