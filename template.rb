@@ -23,12 +23,16 @@ def add_template_repository_to_source_path
 end
 
 def add_gems
-  gem 'vite_rails', '~> 3.0', '>= 3.0.19'
-  gem 'vite_ruby', '~> 3.9', '>= 3.9.1'
   gem 'ruby-vips', '~> 2.2', '>= 2.2.2'
   gem 'annotate', group: :development
   gem 'devise'
   gem 'name_of_person'
+end
+
+def add_vite_gems
+  copy_file 'vite.json', 'config/vite.json'
+  gem 'vite_rails', '~> 3.0', '>= 3.0.19'
+  gem 'vite_ruby', '~> 3.9', '>= 3.9.1'
 end
 
 def add_hotwired_gem
@@ -41,7 +45,7 @@ def set_application_name
   environment 'config.application_name = Rails.application.class.module_parent_name'
 
   # Announce the user where they can change the application name in the future.
-  puts 'You can change application name inside: ./config/application.rb'
+  say '  You can change application name inside: ./config/application.rb', :cyan
 end
 
 def add_vite
@@ -83,11 +87,47 @@ def append_docker_ignores
   inject_into_file '.gitignore', "\n\n# Ignore docker container files\n/db/development/", after: '/public/assets'
 end
 
-def setup_docker_compose
+def setup_docker_compose(flag = nil)
+  flag_clause = flag ? "for #{flag}" : ''
+  unless system 'which docker'
+    say "  Docker is not installed. Please install Docker to apply changes #{flag_clause}", :red
+    return
+  end
+
   # TODO: Check to make sure docker is installed before proceeding
-  copy_file 'docker-compose.yml'
-  system 'docker compose up -d', out: $stdout, err: :out
-  sleep 10
+  flag_clause = flag ? "for #{flag}" : ''
+  case flag
+    when '--docker-essential'
+      say "  Configuring Docker with postgres & redis #{flag_clause}", :cyan
+      copy_file 'docker-compose.essential.yml', 'docker-compose.yml'
+    when '--docker-with-admin'
+      say "  Configuring Docker with postgres, redis, adminer & redis-commander #{flag_clause}", :cyan
+      copy_file 'docker-compose.with-admin.yml', 'docker-compose.yml'
+    else
+      say "  Configuring Docker with postgres, redis, adminer, redis-commander & mailhog #{flag_clause}", :cyan
+      copy_file 'docker-compose.yml'
+  end
+
+  run 'brew install direnv' unless system 'which direnv'
+  run 'brew install postgresql@15' unless system 'which createuser'
+
+  setup_env_files
+
+  system 'docker compose --profile essential up -d', out: $stdout, err: :out
+  sleep 15
+
+  run "createuser --createdb --no-createrole --superuser postgres -h 127.0.0.1 -U #{ENV.fetch('USER')}"
+  run "createuser --createdb --no-createrole --superuser root -h 127.0.0.1 -U #{ENV.fetch('USER')}"
+end
+
+def setup_env_files
+  return if File.exist?('.env.development')
+
+  copy_file '.env.development'
+  copy_file '.env.test'
+
+  copy_file '.envrc'
+  run 'direnv allow'
 end
 
 def copy_templates
@@ -97,13 +137,14 @@ def copy_templates
   copy_file 'tailwind.config.js'
   copy_file 'postcss.config.js'
 
-  copy_file '.env.development'
-  copy_file '.env.test'
+  setup_env_files
 
   # directory 'app', force: true
-  directory 'config', force: true
+  # directory 'config', force: true
   directory 'lib', force: true
   directory 'script', force: true
+
+  run 'chmod +x script/*'
 
   run 'for file in lib/templates/**/**/*.txt; do mv "$file" "${file%.txt}.tt"; done'
   say '  Custom scaffold templates copied', :green
@@ -117,8 +158,8 @@ end
 def run_command_flags
   ARGV.each do |flag|
     case flag
-    when '--docker'
-      setup_docker_compose
+    when '--docker', '--docker-with-admin', '--docker-essential'
+      setup_docker_compose(flag)
     when '--react'
       copy_file 'vite.config-react.ts', 'vite.config.ts'
       copy_file '.eslintrc-react.json', '.eslintrc.json'
@@ -151,11 +192,10 @@ add_gems
 after_bundle do
   add_template_repository_to_source_path
   set_application_name
+  add_vite_gems
   add_pages_controller
   setup_legacy_version_files
-  # setup_docker_compose
   run_command_flags
-  # append_docker_ignores
 
   copy_templates
   setup_yarn_v4
@@ -192,9 +232,8 @@ after_bundle do
 
   new_ignore_block = <<~GIT_IGNORE
 
-    # Ignore dotenv file
-    .env
-    .env.*.local
+    !/.env.development
+    !/.env.test
 
     # Ignore yarn v4 files
     .yarn/*
@@ -215,7 +254,7 @@ after_bundle do
     # Ignore Docker container files
     db/development/
   GIT_IGNORE
-  inject_into_file('.gitignore', new_ignore_block, after: '/public/assets')
+  inject_into_file('.gitignore', new_ignore_block, after: '/.env*')
 
   rails_command 'active_storage:install'
   rails_command 'g annotate:install'

@@ -16,24 +16,6 @@ services:
       - essential
       - with-batteries
 
-  # Docs: https://github.com/joeferner/redis-commander?tab=readme-ov-file#with-docker-compose
-  redis-commander:
-    image: ghcr.io/joeferner/redis-commander
-    hostname: redis-commander
-    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
-    env_file:
-      - .env.development
-    #environment:
-    #  - REDIS_HOSTS=${REDIS_HOSTS}
-    ports:
-      - "8081:8081"
-    user: ${REDIS_USER:-redis}
-    depends_on:
-      - redis
-    profiles:
-      - with-admin-tools
-      - with-batteries
-
   redis:
     image: redis:7
     hostname: redis
@@ -46,17 +28,6 @@ services:
       - essential
       - with-batteries
 
-  adminer:
-    image: adminer
-    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
-    ports:
-      - 8080:8080
-    depends_on:
-      - db
-    profiles:
-      - with-admin-tools
-      - with-batteries
-
   mailhog:
     image: mailhog/mailhog
     platform: linux/amd64
@@ -64,8 +35,6 @@ services:
     ports:
       - '1025:1025'
       - '8025:8025'
-    profiles:
-      - with-batteries
 
 networks:
   default:

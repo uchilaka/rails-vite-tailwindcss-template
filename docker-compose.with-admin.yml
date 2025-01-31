@@ -1,4 +1,15 @@
 services:
+  adminer:
+    image: adminer
+    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+    profiles:
+      - with-admin-tools
+      - with-batteries
+
   db:
     image: postgres:15
     hostname: postgres
@@ -23,8 +34,6 @@ services:
     restart: ${DOCKER_RESTART_MODE:-unless-stopped}
     env_file:
       - .env.development
-    #environment:
-    #  - REDIS_HOSTS=${REDIS_HOSTS}
     ports:
       - "8081:8081"
     user: ${REDIS_USER:-redis}
@@ -44,27 +53,6 @@ services:
       - ./db/development/redis:/data
     profiles:
       - essential
-      - with-batteries
-
-  adminer:
-    image: adminer
-    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
-    ports:
-      - 8080:8080
-    depends_on:
-      - db
-    profiles:
-      - with-admin-tools
-      - with-batteries
-
-  mailhog:
-    image: mailhog/mailhog
-    platform: linux/amd64
-    restart: ${DOCKER_RESTART_MODE:-unless-stopped}
-    ports:
-      - '1025:1025'
-      - '8025:8025'
-    profiles:
       - with-batteries
 
 networks:
