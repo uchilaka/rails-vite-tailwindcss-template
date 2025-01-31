@@ -30,7 +30,7 @@ def add_gems
 end
 
 def add_vite_gems
-  copy_file 'vite.json', 'config/vite.json'
+  copy_file 'vite.json', 'config/vite.json' if Dir.exists?('config')
   gem 'vite_rails', '~> 3.0', '>= 3.0.19'
   gem 'vite_ruby', '~> 3.9', '>= 3.9.1'
 end
@@ -140,7 +140,7 @@ def copy_templates
   setup_env_files
 
   # directory 'app', force: true
-  # directory 'config', force: true
+  directory 'config', force: true
   directory 'lib', force: true
   directory 'script', force: true
 
